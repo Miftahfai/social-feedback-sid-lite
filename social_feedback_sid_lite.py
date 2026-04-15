@@ -38,7 +38,7 @@ Where to edit common settings
 -----------------------------
 - Timings: search for "TIMING CONSTANTS"
 - Response keys: search for "RESPONSE SETTINGS"
-- Feedback comments: search for "COMMENT POOLS"
+- Feedback text: search for "FEEDBACK MESSAGE SETTINGS"
 - Trigger behavior: search for "EEG / EVENT TRIGGER SETTINGS"
 - Screen layout and colors: search for "VISUAL DESIGN SETTINGS"
 - Self avatar selection: search for "run_self_selection"
@@ -100,11 +100,10 @@ DATA_DIR = SCRIPT_DIR / "data"
 # ---------------------------------------------------------------------------
 # RESPONSE SETTINGS
 # ---------------------------------------------------------------------------
-LEFT_KEY = "left"
-RIGHT_KEY = "right"
+RESPONSE_KEY = "space"
 CONTINUE_KEY = "space"
 QUIT_KEY = "escape"
-ALLOWED_RESPONSE_KEYS = [LEFT_KEY, RIGHT_KEY]
+ALLOWED_RESPONSE_KEYS = [RESPONSE_KEY]
 
 
 # ---------------------------------------------------------------------------
@@ -115,10 +114,8 @@ POST_DUR = 1.200
 CUE_DUR = 1.000
 ANTICIPATION_MIN = 0.800
 ANTICIPATION_MAX = 1.200
-TARGET_TIMEOUT = 1.000
+TARGET_TIMEOUT = 1.500
 FEEDBACK1_DUR = 0.800
-BETWEEN_FEEDBACK_DUR = 0.400
-FEEDBACK2_DUR = 1.200
 ITI_MIN = 0.800
 ITI_MAX = 1.200
 
@@ -131,7 +128,7 @@ MAIN_TRIALS_TOTAL = 96
 MAIN_BLOCKS = 3
 TRIALS_PER_BLOCK = 32
 TRIALS_PER_CELL_PER_BLOCK = 4
-INITIAL_RT_THRESHOLD = 0.500  # 500 ms
+INITIAL_RT_THRESHOLD = 0.800  # 800 ms
 MIN_RT_THRESHOLD = 0.250
 MAX_RT_THRESHOLD = 0.900
 TARGET_WIN_RATE = 0.60
@@ -155,44 +152,30 @@ TEXT_COLOR = "white"
 SECONDARY_TEXT_COLOR = "#C8C8C8"
 POST_PANEL_COLOR = "#12171D"
 POST_BORDER_COLOR = "#2D3945"
-COMMENT_BUBBLE_COLOR = "#232A33"
-COMMENT_BORDER_COLOR = "#606A75"
 REWARD_COLOR = "#46C06F"
 PUNISHMENT_COLOR = "#E3A541"
 TARGET_COLOR = "white"
 FIXATION_COLOR = "white"
+FEEDBACK_DETAIL_COLOR = "#C8D1DA"
 
 # Stable screen positions support EEG / eye tracking / ECG friendly design.
 USERNAME_POS = (-0.16, 0.18)
 USERMETA_POS = (-0.16, 0.145)
 AVATAR_POS = (-0.24, 0.17)
 CUE_POS = (0.0, -0.33)
-COMMENT_POS = (0.0, -0.40)
 FIXATION_POS = (0.0, 0.0)
 TARGET_POS = (0.0, 0.0)
 POST_TEXT_POS = (-0.16, 0.05)
+FEEDBACK_DETAIL_POS = (0.0, -0.07)
 
 
 # ---------------------------------------------------------------------------
-# COMMENT POOLS
+# FEEDBACK MESSAGE SETTINGS
 # ---------------------------------------------------------------------------
-POSITIVE_COMMENTS = [
-    "Nice post",
-    "Love this",
-    "So cool",
-    "Looks great",
-    "Really nice",
-    "Well done",
-]
-
-NEGATIVE_COMMENTS = [
-    "Not my thing",
-    "Meh",
-    "Boring",
-    "Nothing special",
-    "Not for me",
-    "Doesn't stand out",
-]
+LIKE_LABEL = "Like +1"
+NO_LIKE_LABEL = "Like +0"
+DISLIKE_LABEL = "Dislike 1"
+NO_DISLIKE_LABEL = "Dislike 0"
 
 
 # ---------------------------------------------------------------------------
@@ -244,13 +227,11 @@ TRIGGER_MAP = {
     "reward_cue": 21,
     "punishment_cue": 22,
     "target_onset": 31,
-    "response_left": 41,
-    "response_right": 42,
+    "response_space": 41,
     "response_missed": 43,
     "outcome_win": 51,
     "outcome_loss": 52,
     "feedback1_onset": 61,
-    "feedback2_onset": 62,
     "block_start": 71,
     "block_end": 72,
     "experiment_end": 99,
@@ -834,26 +815,16 @@ def create_visuals(win):
         text="",
         color=TEXT_COLOR,
         height=0.045,
-        pos=(0.0, 0.00),
+        pos=(0.0, 0.03),
     )
 
-    visuals["comment_bubble"] = visual.Rect(
-        win,
-        width=0.56,
-        height=0.12,
-        fillColor=COMMENT_BUBBLE_COLOR,
-        lineColor=COMMENT_BORDER_COLOR,
-        lineWidth=1.5,
-        pos=COMMENT_POS,
-    )
-
-    visuals["comment_text"] = visual.TextStim(
+    visuals["feedback_detail_text"] = visual.TextStim(
         win,
         text="",
-        color=TEXT_COLOR,
+        color=FEEDBACK_DETAIL_COLOR,
         height=0.028,
         wrapWidth=0.48,
-        pos=COMMENT_POS,
+        pos=FEEDBACK_DETAIL_POS,
     )
 
     visuals["instruction_text"] = visual.TextStim(
@@ -916,7 +887,7 @@ def send_trigger(label, trigger_log):
 
 def check_for_abort():
     """Abort immediately if escape has been pressed."""
-    if QUIT_KEY in event.getKeys():
+    if QUIT_KEY in event.getKeys(keyList=[QUIT_KEY]):
         raise ExperimentAbort("Experiment aborted by user.")
 
 
@@ -996,24 +967,23 @@ def show_instructions(win, visuals, participant_info):
             "Please pay attention to whether each post is presented as yours or someone else's."
         ),
         (
-            "Reward vs Punishment Cues\n\n"
-            "A circle means a reward trial.\n"
+            "Get Like vs Avoid Dislike Cues\n\n"
+            "A circle means a Get Like trial.\n"
             "If you respond fast enough, you can earn positive social feedback.\n\n"
-            "A square means a punishment trial.\n"
+            "A square means an Avoid Dislike trial.\n"
             "If you respond fast enough, you can avoid negative social feedback."
         ),
         (
             "Your Response Task\n\n"
             "After a short delay, a white target will appear in the center.\n\n"
-            f"Press either the {LEFT_KEY} or {RIGHT_KEY} key as quickly as possible "
-            "when the target appears.\n\n"
+            f"Press the {RESPONSE_KEY} key as quickly as possible when the target appears.\n\n"
             "This is a speeded response task. You do not choose between posts."
         ),
         (
             "Practice\n\n"
             "You will now complete a short practice block.\n\n"
             "Use the practice to learn the sequence:\n"
-            "post -> cue -> delay -> target -> feedback -> comment area."
+            "post -> cue -> delay -> target -> feedback."
         ),
     ]
 
@@ -1040,20 +1010,39 @@ def choose_post_assets(trial, stimuli, rng, participant_info):
     return username, post_text, avatar_path
 
 
-def get_feedback_phase1_text(cue_type, win_boolean):
-    """Map outcome and cue type to the required phase 1 feedback."""
-    if cue_type == "reward":
-        return "Like +1" if win_boolean else "Like +0"
-    return "Dislike 0" if win_boolean else "Dislike 1"
+def choose_feedback_actor(post_username, participant_info, rng):
+    """Pick another fake account name for feedback attribution."""
+    excluded_names = {post_username, participant_info["self_username"]}
+    available_names = [
+        username for username in OTHER_USERNAMES if username not in excluded_names
+    ]
+    return rng.choice(available_names or OTHER_USERNAMES)
 
 
-def get_feedback_phase2_comment(cue_type, win_boolean, rng):
-    """Map outcome and cue type to the required comment behavior."""
-    if cue_type == "reward" and win_boolean:
-        return rng.choice(POSITIVE_COMMENTS)
-    if cue_type == "punishment" and not win_boolean:
-        return rng.choice(NEGATIVE_COMMENTS)
-    return ""
+def get_feedback_texts(trial, post_username, win_boolean, participant_info, rng):
+    """Build the single-screen feedback label plus a short account message."""
+    post_target = (
+        "your post" if trial["post_relevance"] == "self" else f"{post_username}'s post"
+    )
+
+    if trial["cue_type"] == "reward":
+        if win_boolean:
+            actor_name = choose_feedback_actor(post_username, participant_info, rng)
+            return LIKE_LABEL, f"{actor_name} liked {post_target}"
+        return NO_LIKE_LABEL, f"No one liked {post_target}"
+
+    if win_boolean:
+        return NO_DISLIKE_LABEL, f"No one disliked {post_target}"
+
+    actor_name = choose_feedback_actor(post_username, participant_info, rng)
+    return DISLIKE_LABEL, f"{actor_name} disliked {post_target}"
+
+
+def format_rt_text(rt, responded):
+    """Create a short RT debug line for the feedback screen."""
+    if responded and not math.isnan(rt):
+        return f"RT: {round(rt * 1000)} ms"
+    return "RT: no response"
 
 
 def show_fixation(win, visuals, duration):
@@ -1074,15 +1063,15 @@ def show_post_phase(win, visuals, username, post_text, avatar_path, trigger_labe
 
 
 def show_cue_phase(win, visuals, cue_type):
-    """Show reward/punishment cue using simple stable shapes."""
+    """Show Get Like/Avoid Dislike cues using simple stable shapes."""
     trigger_log = []
     if cue_type == "reward":
         visuals["cue_reward"].draw()
-        visuals["cue_label"].text = "Reward"
+        visuals["cue_label"].text = "Get Like"
         trigger_label = "reward_cue"
     else:
         visuals["cue_punishment"].draw()
-        visuals["cue_label"].text = "Punishment"
+        visuals["cue_label"].text = "Avoid Dislike"
         trigger_label = "punishment_cue"
 
     visuals["cue_label"].draw()
@@ -1103,7 +1092,7 @@ def run_target_phase(win, visuals):
     """
     Present the central target and collect a speeded response.
 
-    RT is measured from target onset. Either response key is accepted.
+    RT is measured from target onset. Only the space key is accepted.
     """
     trigger_log = []
     response_clock = core.Clock()
@@ -1128,10 +1117,8 @@ def run_target_phase(win, visuals):
             responded = True
             response_key = first_key
             rt = key_time
-            if response_key == LEFT_KEY:
-                send_trigger("response_left", trigger_log)
-            elif response_key == RIGHT_KEY:
-                send_trigger("response_right", trigger_log)
+            if response_key == RESPONSE_KEY:
+                send_trigger("response_space", trigger_log)
             break
         core.wait(0.001)
 
@@ -1141,37 +1128,16 @@ def run_target_phase(win, visuals):
     return responded, response_key, rt, trigger_log
 
 
-def show_feedback_phase1(win, visuals, feedback_text):
-    """Show the first feedback phase (like/dislike count)."""
+def show_feedback_phase1(win, visuals, feedback_text, feedback_detail_text):
+    """Show the single feedback phase with a short social reaction message."""
     trigger_log = []
     visuals["feedback1_text"].text = feedback_text
+    visuals["feedback_detail_text"].text = feedback_detail_text
     visuals["feedback1_text"].draw()
+    visuals["feedback_detail_text"].draw()
     win.flip()
     send_trigger("feedback1_onset", trigger_log)
     wait_with_abort(FEEDBACK1_DUR)
-    return trigger_log
-
-
-def show_feedback_gap(win):
-    """Brief neutral blank interval between feedback phases."""
-    win.flip()
-    wait_with_abort(BETWEEN_FEEDBACK_DUR)
-
-
-def show_feedback_phase2(win, visuals, comment_text):
-    """
-    Show the comment area in a fixed location.
-
-    Even when no comment is shown, we still present the same comment bubble
-    region to keep the layout visually stable.
-    """
-    trigger_log = []
-    visuals["comment_bubble"].draw()
-    visuals["comment_text"].text = comment_text
-    visuals["comment_text"].draw()
-    win.flip()
-    send_trigger("feedback2_onset", trigger_log)
-    wait_with_abort(FEEDBACK2_DUR)
     return trigger_log
 
 
@@ -1246,18 +1212,22 @@ def run_trial(
     actual_outcome, win_boolean = trial_result_from_rt(rt, responded, threshold_current)
     send_trigger(f"outcome_{actual_outcome}", trial_trigger_labels)
 
-    # 6. Feedback phase 1
-    feedback1_text = get_feedback_phase1_text(trial["cue_type"], win_boolean)
-    trial_trigger_labels.extend(show_feedback_phase1(win, visuals, feedback1_text))
+    # 6. Feedback
+    feedback1_text, feedback_detail_text = get_feedback_texts(
+        trial=trial,
+        post_username=username,
+        win_boolean=win_boolean,
+        participant_info=participant_info,
+        rng=rng,
+    )
+    feedback_detail_text = (
+        f"{feedback_detail_text}\n{format_rt_text(rt, responded)}"
+    )
+    trial_trigger_labels.extend(
+        show_feedback_phase1(win, visuals, feedback1_text, feedback_detail_text)
+    )
 
-    # 7. Gap between feedback phases
-    show_feedback_gap(win)
-
-    # 8. Feedback phase 2
-    comment_text = get_feedback_phase2_comment(trial["cue_type"], win_boolean, rng)
-    trial_trigger_labels.extend(show_feedback_phase2(win, visuals, comment_text))
-
-    # 9. ITI
+    # 7. ITI
     iti_dur = rng.uniform(ITI_MIN, ITI_MAX)
     show_fixation(win, visuals, iti_dur)
 
@@ -1291,8 +1261,8 @@ def run_trial(
         "post_username": username,
         "post_text": post_text,
         "avatar_filename": avatar_path.name if avatar_path else "",
-        "comment_text": comment_text,
         "feedback1_text": feedback1_text,
+        "feedback_detail_text": feedback_detail_text,
         "trigger_labels": "|".join(trial_trigger_labels),
         "timestamp_global": round(global_clock.getTime(), 4),
         "timestamp_trial_start": round(trial_start_global, 4),
